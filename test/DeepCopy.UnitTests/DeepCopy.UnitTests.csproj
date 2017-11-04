@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\DeepCopy\DeepCopy.csproj" />
+    <ProjectReference Include="..\..\src\DeepCopy\DeepCopy.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Linq;
 using Microsoft.Extensions.ObjectPool;
 
 namespace DeepCopy

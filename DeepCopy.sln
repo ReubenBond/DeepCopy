@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27004.2006
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepCopy", "DeepCopy\DeepCopy.csproj", "{751D7E7F-D8AF-4B0E-93FE-F9CCFD250D7B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepCopy", "src\DeepCopy\DeepCopy.csproj", "{751D7E7F-D8AF-4B0E-93FE-F9CCFD250D7B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepCopy.UnitTests", "..\DeepCopy.UnitTests\DeepCopy.UnitTests.csproj", "{366726CE-A985-4989-83A9-0F1804EF1318}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepCopy.UnitTests", "test\DeepCopy.UnitTests\DeepCopy.UnitTests.csproj", "{366726CE-A985-4989-83A9-0F1804EF1318}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

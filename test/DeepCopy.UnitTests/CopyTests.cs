@@ -1,8 +1,8 @@
-using System;
 using Xunit;
 
 namespace DeepCopy.UnitTests
 {
+    [Trait("TestCategory", "BVT")]
     public class CopyTests
     {
         [Fact]
