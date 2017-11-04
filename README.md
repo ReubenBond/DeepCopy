@@ -1,6 +1,8 @@
 # DeepCopy
 Simple &amp; efficient library for deep copying .NET objects
 
+Described in this blog post: https://reubenbond.github.io/posts/codegen-2-il-boogaloo
+
 ## Installation:
 Install via NuGet:
 ```powershell
