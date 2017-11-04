@@ -29,6 +29,26 @@ namespace DeepCopy
             this.policies[typeof(TimeSpan)] = Policy.Immutable;
             this.policies[typeof(string)] = Policy.Immutable;
             this.policies[typeof(Guid)] = Policy.Immutable;
+            this.policies[typeof(DateTimeOffset)] = Policy.Immutable;
+            this.policies[typeof(Version)] = Policy.Immutable;
+            this.policies[typeof(Uri)] = Policy.Immutable;
+            this.policies[typeof(KeyValuePair<,>)] = Policy.Immutable;
+            this.policies[typeof(Tuple<,>)] = Policy.Immutable;
+            this.policies[typeof(Tuple<,,>)] = Policy.Immutable;
+            this.policies[typeof(Tuple<,,,>)] = Policy.Immutable;
+            this.policies[typeof(Tuple<,,,,>)] = Policy.Immutable;
+            this.policies[typeof(Tuple<,,,,,>)] = Policy.Immutable;
+            this.policies[typeof(Tuple<,,,,,>)] = Policy.Immutable;
+            this.policies[typeof(Tuple<,,,,,,>)] = Policy.Immutable;
+            this.policies[typeof(Tuple<,,,,,,,>)] = Policy.Immutable;
+            this.policies[typeof(ValueTuple<,>)] = Policy.Immutable;
+            this.policies[typeof(ValueTuple<,,>)] = Policy.Immutable;
+            this.policies[typeof(ValueTuple<,,,>)] = Policy.Immutable;
+            this.policies[typeof(ValueTuple<,,,,>)] = Policy.Immutable;
+            this.policies[typeof(ValueTuple<,,,,,>)] = Policy.Immutable;
+            this.policies[typeof(ValueTuple<,,,,,>)] = Policy.Immutable;
+            this.policies[typeof(ValueTuple<,,,,,,>)] = Policy.Immutable;
+            this.policies[typeof(ValueTuple<,,,,,,,>)] = Policy.Immutable;
         }
 
         /// <summary>
@@ -107,9 +127,14 @@ namespace DeepCopy
                 return this.policies[type] = Policy.Immutable;
             }
 
-            if (type.GetCustomAttributes(typeof(ImmutableAttribute), false).Any())
+            if (type.GetCustomAttribute<ImmutableAttribute>(false) != null)
             {
                 return this.policies[type] = Policy.Immutable;
+            }
+
+            if (type.IsGenericType && this.policies.TryGetValue(type.GetGenericTypeDefinition(), out result))
+            {
+                return result;
             }
 
             if (type.IsPointer) return Policy.Immutable;
