@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 
 namespace DeepCopy
 {
@@ -9,6 +9,8 @@ namespace DeepCopy
     /// </summary>
     internal sealed class CopierGenerator
     {
+        private readonly CachedReadConcurrentDictionary<(Type originalType, Type parameterType), Delegate> copiers
+            = new CachedReadConcurrentDictionary<(Type originalType, Type parameterType), Delegate>();
         private readonly StaticFieldBuilder fieldBuilder = new StaticFieldBuilder();
         private readonly MethodInfos methodInfos = new MethodInfos();
         private readonly CopyPolicy copyPolicy;
@@ -23,7 +25,7 @@ namespace DeepCopy
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns>A copier for the provided type.</returns>
-        public DeepCopyDelegate<T> CreateCopier<T>(Type type)
+        public DeepCopyDelegate<T> GetOrCreateCopier<T>(Type type)
         {
             if (this.copyPolicy.IsImmutable(type))
             {
@@ -31,8 +33,26 @@ namespace DeepCopy
                 return ImmutableCopier;
             }
 
+            var parameterType = typeof(T);
+            var key = (type, parameterType);
+            if (!this.copiers.TryGetValue(key, out var untypedCopier))
+            {
+                untypedCopier = this.CreateCopier<T>(type);
+                this.copiers.TryAdd(key, untypedCopier);
+            }
+            
+            return (DeepCopyDelegate<T>) untypedCopier;
+        }
+
+        /// <summary>
+        /// Gets a copier for the provided type.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <returns>A copier for the provided type.</returns>
+        private DeepCopyDelegate<T> CreateCopier<T>(Type type)
+        {
             // By-ref types are not supported.
-            if (type.IsByRef) return null;
+            if (type.IsByRef) return ThrowNotSupportedType<T>(type);
 
             var dynamicMethod = new DynamicMethod(
                 type.Name + "DeepCopier",
@@ -70,15 +90,14 @@ namespace DeepCopy
                 il.Emit(OpCodes.Stloc_0);
             }
 
-            // Record the object.
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldloc_0);
-
             // An instance of a value types can never appear multiple times in an object graph,
             // so only record reference types in the context.
             if (!type.IsValueType)
             {
+                // Record the object.
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldloc_0);
                 il.Emit(OpCodes.Call, this.methodInfos.RecordObject);
             }
 
@@ -116,6 +135,12 @@ namespace DeepCopy
             il.Emit(OpCodes.Ldloc_0);
             il.Emit(OpCodes.Ret);
             return dynamicMethod.CreateDelegate(typeof(DeepCopyDelegate<T>)) as DeepCopyDelegate<T>;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static DeepCopyDelegate<T> ThrowNotSupportedType<T>(Type type)
+        {
+            throw new NotSupportedException($"Unable to copy object of type {type}.");
         }
     }
 }

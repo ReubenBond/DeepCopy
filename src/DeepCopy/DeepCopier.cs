@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using Microsoft.Extensions.ObjectPool;
 
 namespace DeepCopy
@@ -9,7 +8,6 @@ namespace DeepCopy
     /// </summary>
     public static class DeepCopier
     {
-        private static readonly ConcurrentDictionary<(Type originalType, Type parameterType), Delegate> Copiers = new ConcurrentDictionary<(Type originalType, Type parameterType), Delegate>();
         private static readonly CopyPolicy CopyPolicy = new CopyPolicy();
         private static readonly CopierGenerator CopierGenerator = new CopierGenerator(CopyPolicy);
         private static readonly ObjectPool<CopyContext> ContextPool = new DefaultObjectPool<CopyContext>(new ContextPoolPolicy());
@@ -57,18 +55,8 @@ namespace DeepCopy
                 var originalArray = original as Array;
                 if (originalArray != null) return (T)CopyArray(originalArray, context);
             }
-
-            var parameterType = typeof(T);
-            var key = (type, parameterType);
-            if (!Copiers.TryGetValue(key, out var untypedCopier))
-            {
-                untypedCopier = CopierGenerator.CreateCopier<T>(type);
-                Copiers.TryAdd(key, untypedCopier);
-            }
-
-            if (untypedCopier == null) return ThrowNotSupportedType<T>(type);
             
-            var typedCopier = (DeepCopyDelegate<T>) untypedCopier;
+            var typedCopier = CopierGenerator.GetOrCreateCopier<T>(type);
             return typedCopier(original, context);
         }
 
@@ -136,11 +124,6 @@ namespace DeepCopy
             }
 
             return copyArray;
-        }
-
-        private static T ThrowNotSupportedType<T>(Type type)
-        {
-            throw new NotSupportedException($"Unable to copy object of type {type}.");
         }
 
         private sealed class ContextPoolPolicy : IPooledObjectPolicy<CopyContext>

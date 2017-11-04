@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -18,8 +17,8 @@ namespace DeepCopy
         private static readonly ModuleBuilder ModuleBuilder = AssemblyBuilder.DefineDynamicModule(
             nameof(StaticFieldBuilder));
 
-        private readonly ConcurrentDictionary<object, FieldInfo> staticFields =
-            new ConcurrentDictionary<object, FieldInfo>(new ReferenceEqualsComparer());
+        private readonly CachedReadConcurrentDictionary<object, FieldInfo> staticFields =
+            new CachedReadConcurrentDictionary<object, FieldInfo>(new ReferenceEqualsComparer());
 
         /// <summary>
         /// Gets or creates a <see langword="static"/>, <see langword="readonly"/> field which holds the specified

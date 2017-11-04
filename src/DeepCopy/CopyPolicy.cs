@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -11,18 +10,25 @@ namespace DeepCopy
     /// </summary>
     internal sealed class CopyPolicy
     {
-        private readonly ConcurrentDictionary<Type, bool> shallowCopyableTypes = new ConcurrentDictionary<Type, bool>();
-        private readonly ConcurrentDictionary<Type, bool> immutableTypes = new ConcurrentDictionary<Type, bool>();
+        private enum Policy
+        {
+            Mutable,
+            ShallowCopyable,
+            Immutable
+        }
+
+        private readonly CachedReadConcurrentDictionary<Type, Policy> policies = new CachedReadConcurrentDictionary<Type, Policy>();
         private readonly RuntimeTypeHandle intPtrTypeHandle = typeof(IntPtr).TypeHandle;
         private readonly RuntimeTypeHandle uIntPtrTypeHandle = typeof(UIntPtr).TypeHandle;
         private readonly Type delegateType = typeof(Delegate);
 
         public CopyPolicy()
         {
-            this.immutableTypes[typeof(Decimal)] = true;
-            this.immutableTypes[typeof(DateTime)] = true;
-            this.immutableTypes[typeof(TimeSpan)] = true;
-            this.immutableTypes[typeof(string)] = true;
+            this.policies[typeof(decimal)] = Policy.Immutable;
+            this.policies[typeof(DateTime)] = Policy.Immutable;
+            this.policies[typeof(TimeSpan)] = Policy.Immutable;
+            this.policies[typeof(string)] = Policy.Immutable;
+            this.policies[typeof(Guid)] = Policy.Immutable;
         }
 
         /// <summary>
@@ -76,23 +82,7 @@ namespace DeepCopy
         /// <returns>true if the provided type can be shallow-copied, false if it must be deep copied instead.</returns>
         public bool IsShallowCopyable(Type type)
         {
-            if (this.shallowCopyableTypes.TryGetValue(type, out var result))
-            {
-                return result;
-            }
-
-            if (this.IsImmutable(type))
-            {
-                return this.shallowCopyableTypes[type] = true;
-            }
-
-            if (type.IsValueType && !type.IsGenericType && !type.IsGenericTypeDefinition)
-            {
-                result = this.GetCopyableFields(type).All(f => f.FieldType != type && this.IsShallowCopyable(f.FieldType));
-                return this.shallowCopyableTypes[type] = result;
-            }
-
-            return this.shallowCopyableTypes[type] = false;
+            return this.GetPolicy(type) != Policy.Mutable;
         }
 
         /// <summary>
@@ -102,29 +92,42 @@ namespace DeepCopy
         /// <returns>true if the provided type is immutable, otherwise false.</returns>
         public bool IsImmutable(Type type)
         {
-            if (this.immutableTypes.TryGetValue(type, out var result))
+            return this.GetPolicy(type) == Policy.Immutable;
+        }
+
+        private Policy GetPolicy(Type type)
+        {
+            if (this.policies.TryGetValue(type, out var result))
             {
                 return result;
             }
 
             if (type.IsPrimitive || type.IsEnum)
             {
-                return this.immutableTypes[type] = true;
+                return this.policies[type] = Policy.Immutable;
             }
 
             if (type.GetCustomAttributes(typeof(ImmutableAttribute), false).Any())
             {
-                return this.immutableTypes[type] = true;
+                return this.policies[type] = Policy.Immutable;
             }
 
-            if (type.IsPointer) return true;
+            if (type.IsPointer) return Policy.Immutable;
 
             var handle = type.TypeHandle;
-            if (handle.Equals(this.intPtrTypeHandle)) return true;
-            if (handle.Equals(this.uIntPtrTypeHandle)) return true;
-            if (this.delegateType.IsAssignableFrom(type)) return true;
-
-            return false;
+            if (handle.Equals(this.intPtrTypeHandle)) return Policy.Immutable;
+            if (handle.Equals(this.uIntPtrTypeHandle)) return Policy.Immutable;
+            if (this.delegateType.IsAssignableFrom(type)) return Policy.Immutable;
+            
+            if (type.IsValueType && !type.IsGenericType && !type.IsGenericTypeDefinition)
+            {
+                if (this.GetCopyableFields(type).All(f => f.FieldType != type && this.IsShallowCopyable(f.FieldType)))
+                {
+                    return this.policies[type] = Policy.ShallowCopyable;
+                }
+            }
+            
+            return this.policies[type] = Policy.Mutable;
         }
 
         /// <summary>

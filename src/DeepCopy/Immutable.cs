@@ -21,11 +21,18 @@
     [Immutable]
     public struct Immutable<T>
     {
+        /// <summary>
+        /// Initializes a new <see cref="Immutable{T}"/> instance.
+        /// </summary>
+        /// <param name="value">The value.</param>
         public Immutable(T value)
         {
             this.Value = value;
         }
 
+        /// <summary>
+        /// Gets the value held by this instance.
+        /// </summary>
         public T Value { get; }
     }
 }
