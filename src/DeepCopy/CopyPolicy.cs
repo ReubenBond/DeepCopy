@@ -44,7 +44,7 @@ namespace DeepCopy
                 const BindingFlags allFields =
                     BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
                 var current = containingType;
-                while ((current != typeof(object)) && (current != null))
+                while (current != typeof(object) && current != null)
                 {
                     var fields = current.GetFields(allFields);
                     foreach (var field in fields)

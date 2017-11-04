@@ -88,6 +88,14 @@ namespace DeepCopy.UnitTests
         }
 
         [Fact]
+        public void ImmutableWrapperTypesAreNotCopied()
+        {
+            var original = Immutable.Create(new object[] { 123, "hello!" } );
+            var result = DeepCopier.Copy(original);
+            Assert.Same(original.Value, result.Value);
+        }
+
+        [Fact]
         public void CanCopyCyclicObjects()
         {
             var original = new Poco();

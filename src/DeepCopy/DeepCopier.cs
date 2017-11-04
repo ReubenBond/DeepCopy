@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using Microsoft.Extensions.ObjectPool;
 
 namespace DeepCopy
@@ -9,10 +10,9 @@ namespace DeepCopy
     /// </summary>
     public static class DeepCopier
     {
-        private static readonly ConcurrentDictionary<Type, DeepCopyDelegate> Copiers = new ConcurrentDictionary<Type, DeepCopyDelegate>();
+        private static readonly ConcurrentDictionary<(Type originalType, Type parameterType), Delegate> Copiers = new ConcurrentDictionary<(Type originalType, Type parameterType), Delegate>();
         private static readonly CopyPolicy CopyPolicy = new CopyPolicy();
         private static readonly CopierGenerator CopierGenerator = new CopierGenerator(CopyPolicy);
-        private static readonly Func<Type, DeepCopyDelegate> CreateDelegate = CopierGenerator.CreateCopier;
         private static readonly ObjectPool<CopyContext> ContextPool = new DefaultObjectPool<CopyContext>(new ContextPoolPolicy());
 
         /// <summary>
@@ -21,14 +21,7 @@ namespace DeepCopy
         /// <typeparam name="T">The object type.</typeparam>
         /// <param name="original">The object to copy.</param>
         /// <returns>A deep copy of the provided object.</returns>
-        public static T Copy<T>(T original) => (T)Copy((object)original);
-
-        /// <summary>
-        /// Creates and returns a deep copy of the provided object.
-        /// </summary>
-        /// <param name="original">The object to copy.</param>
-        /// <returns>A deep copy of the provided object.</returns>
-        public static object Copy(object original)
+        public static T Copy<T>(T original)
         {
             var context = ContextPool.Get();
             try
@@ -44,26 +37,40 @@ namespace DeepCopy
         /// <summary>
         /// Creates and returns a deep copy of the provided object.
         /// </summary>
+        /// <typeparam name="T">The object type.</typeparam>
         /// <param name="original">The object to copy.</param>
         /// <param name="context">
         /// The copy context, providing referential integrity between multiple calls to this method.
         /// </param>
         /// <returns>A deep copy of the provided object.</returns>
-        public static object Copy(object original, CopyContext context)
+        public static T Copy<T>(T original, CopyContext context)
         {
-            if (original is null) return null;
+            if (original == null) return default(T);
 
             // If this object has already been copied, return that copy.
             var existingCopy = context.TryGetCopy(original);
-            if (existingCopy != null) return existingCopy;
+            if (existingCopy != null) return (T)existingCopy;
 
-            // Handle arrays specially.
-            if (original is Array originalArray) return CopyArray(originalArray, context);
+            var type = original.GetType();
+            if (!type.IsValueType)
+            {
+                // Handle arrays specially.
+                var originalArray = original as Array;
+                if (originalArray != null) return (T)CopyArray(originalArray, context);
+            }
 
-            var copier = Copiers.GetOrAdd(original.GetType(), CreateDelegate);
-            if (copier == null) return ThrowNotSupportedType(original);
+            var parameterType = typeof(T);
+            var key = (type, parameterType);
+            if (!Copiers.TryGetValue(key, out var untypedCopier))
+            {
+                untypedCopier = CopierGenerator.CreateCopier<T>(type);
+                Copiers.TryAdd(key, untypedCopier);
+            }
 
-            return copier(original, context);
+            if (untypedCopier == null) return ThrowNotSupportedType<T>(type);
+            
+            var typedCopier = (DeepCopyDelegate<T>) untypedCopier;
+            return typedCopier(original, context);
         }
 
         /// <summary>
@@ -132,9 +139,9 @@ namespace DeepCopy
             return copyArray;
         }
 
-        private static object ThrowNotSupportedType(object original)
+        private static T ThrowNotSupportedType<T>(Type type)
         {
-            throw new NotSupportedException($"Unable to copy object of type {original.GetType()}.");
+            throw new NotSupportedException($"Unable to copy object of type {type}.");
         }
 
         private sealed class ContextPoolPolicy : IPooledObjectPolicy<CopyContext>

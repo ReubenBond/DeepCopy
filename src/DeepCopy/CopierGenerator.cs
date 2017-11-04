@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Reflection;
+using System.Reflection.Emit;
 
 namespace DeepCopy
 {
@@ -9,7 +11,6 @@ namespace DeepCopy
     {
         private readonly StaticFieldBuilder fieldBuilder = new StaticFieldBuilder();
         private readonly MethodInfos methodInfos = new MethodInfos();
-        private readonly DeepCopyDelegate immutableTypeCopier = (obj, context) => obj;
         private readonly CopyPolicy copyPolicy;
         
         public CopierGenerator(CopyPolicy copyPolicy)
@@ -22,62 +23,99 @@ namespace DeepCopy
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns>A copier for the provided type.</returns>
-        public DeepCopyDelegate CreateCopier(Type type)
+        public DeepCopyDelegate<T> CreateCopier<T>(Type type)
         {
-            if (this.copyPolicy.IsImmutable(type)) return this.immutableTypeCopier;
+            if (this.copyPolicy.IsImmutable(type))
+            {
+                T ImmutableCopier(T original, CopyContext context) => original;
+                return ImmutableCopier;
+            }
 
             // By-ref types are not supported.
             if (type.IsByRef) return null;
 
-            var il = new DelegateBuilder<DeepCopyDelegate>(
-                this.fieldBuilder,
+            var dynamicMethod = new DynamicMethod(
                 type.Name + "DeepCopier",
-                this.methodInfos.DeepCopierDelegate);
+                typeof(T),
+                new[] {typeof(T), typeof(CopyContext)},
+                typeof(CopierGenerator).Module,
+                true);
 
-            // Declare local variables.
-            var result = il.DeclareLocal(type);
-            var typedInput = il.DeclareLocal(type);
+            var il = dynamicMethod.GetILGenerator();
 
-            // Set the typed input variable from the method parameter.
-            il.LoadArgument(0);
-            il.CastOrUnbox(type);
-            il.StoreLocal(typedInput);
+            // Declare a variable to store the result.
+            il.DeclareLocal(type);
 
             // Construct the result.
-            il.CreateInstance(type, result, this.methodInfos.GetUninitializedObject);
+            var constructorInfo = type.GetConstructor(Type.EmptyTypes);
+            if (type.IsValueType)
+            {
+                // Value types can be initialized directly.
+                il.Emit(OpCodes.Ldloca_S, (byte)0);
+                il.Emit(OpCodes.Initobj, type);
+            }
+            else if (constructorInfo != null)
+            {
+                // If a default constructor exists, use that.
+                il.Emit(OpCodes.Newobj, constructorInfo);
+                il.Emit(OpCodes.Stloc_0);
+            }
+            else
+            {
+                // If no default constructor exists, create an instance using GetUninitializedObject
+                var field = this.fieldBuilder.GetOrCreateStaticField(type);
+                il.Emit(OpCodes.Ldsfld, field);
+                il.Emit(OpCodes.Call, this.methodInfos.GetUninitializedObject);
+                il.Emit(OpCodes.Castclass, type);
+                il.Emit(OpCodes.Stloc_0);
+            }
 
             // Record the object.
-            il.LoadArgument(1); // Load 'context' parameter.
-            il.LoadArgument(0); // Load 'original' parameter.
-            il.LoadLocal(result); // Load 'result' local.
-            il.BoxIfValueType(type);
-            il.Call(this.methodInfos.RecordObject);
+            il.Emit(OpCodes.Ldarg_1);
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldloc_0);
+
+            // An instance of a value types can never appear multiple times in an object graph,
+            // so only record reference types in the context.
+            if (!type.IsValueType)
+            {
+                il.Emit(OpCodes.Call, this.methodInfos.RecordObject);
+            }
 
             // Copy each field.
             foreach (var field in this.copyPolicy.GetCopyableFields(type))
             {
-                // Load the field.
-                il.LoadLocalAsReference(type, result);
-                il.LoadLocal(typedInput);
-                il.LoadField(field);
+                // Load a reference to the result.
+                if (type.IsValueType)
+                {
+                    // Value types need to be loaded by address rather than copied onto the stack.
+                    il.Emit(OpCodes.Ldloca_S, (byte)0);
+                }
+                else
+                {
+                    il.Emit(OpCodes.Ldloc_0);
+                }
+
+                // Load the field from the result.
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldfld, field);
 
                 // Deep-copy the field if needed, otherwise just leave it as-is.
                 if (!this.copyPolicy.IsShallowCopyable(field.FieldType))
                 {
-                    il.BoxIfValueType(field.FieldType);
-                    il.LoadArgument(1);
-                    il.Call(this.methodInfos.CopyInner);
-                    il.CastOrUnbox(field.FieldType);
+                    // Copy the field using the generic Copy<T> method.
+                    il.Emit(OpCodes.Ldarg_1);
+                    il.Emit(OpCodes.Call, this.methodInfos.CopyInner.MakeGenericMethod(field.FieldType));
                 }
 
                 // Store the copy of the field on the result.
-                il.StoreField(field);
+                il.Emit(OpCodes.Stfld, field);
             }
 
-            il.LoadLocal(result);
-            il.BoxIfValueType(type);
-            il.Return();
-            return il.CreateDelegate();
+            // Return the result.
+            il.Emit(OpCodes.Ldloc_0);
+            il.Emit(OpCodes.Ret);
+            return dynamicMethod.CreateDelegate(typeof(DeepCopyDelegate<T>)) as DeepCopyDelegate<T>;
         }
     }
 }

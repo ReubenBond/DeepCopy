@@ -16,7 +16,7 @@ namespace DeepCopy
         public readonly MethodInfo RecordObject;
 
         /// <summary>
-        /// A reference to <see cref="DeepCopier.Copy(object,DeepCopy.CopyContext)"/>
+        /// A reference to <see cref="DeepCopier.Copy{T}(T, CopyContext)"/>
         /// </summary>
         public readonly MethodInfo CopyInner;
 
@@ -30,18 +30,12 @@ namespace DeepCopy
         /// </summary>
         public readonly MethodInfo GetTypeFromHandle;
         
-        /// <summary>
-        /// The <see cref="MethodInfo"/> for the <see cref="DeepCopier"/> delegate.
-        /// </summary>
-        public readonly MethodInfo DeepCopierDelegate;
-
         public MethodInfos()
         {
             this.GetUninitializedObject = GetFuncCall(() => FormatterServices.GetUninitializedObject(typeof(int)));
             this.GetTypeFromHandle = GetFuncCall(() => Type.GetTypeFromHandle(typeof(Type).TypeHandle));
-            this.CopyInner = GetFuncCall(() => DeepCopier.Copy(default(object), default(CopyContext)));
+            this.CopyInner = GetFuncCall(() => DeepCopier.Copy(default(object), default(CopyContext))).GetGenericMethodDefinition();
             this.RecordObject = GetActionCall((CopyContext ctx) => ctx.RecordCopy(default(object), default(object)));
-            this.DeepCopierDelegate = GetActionCall((DeepCopyDelegate del) => del.Invoke(default(object), default(CopyContext)));
 
             MethodInfo GetActionCall<T>(Expression<Action<T>> expression)
             {
