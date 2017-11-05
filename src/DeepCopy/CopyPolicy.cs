@@ -17,7 +17,7 @@ namespace DeepCopy
             Immutable
         }
 
-        private readonly CachedReadConcurrentDictionary<Type, Policy> policies = new CachedReadConcurrentDictionary<Type, Policy>();
+        private readonly Memoizer<Type, Policy> policies = new Memoizer<Type, Policy>();
         private readonly RuntimeTypeHandle intPtrTypeHandle = typeof(IntPtr).TypeHandle;
         private readonly RuntimeTypeHandle uIntPtrTypeHandle = typeof(UIntPtr).TypeHandle;
         private readonly Type delegateType = typeof(Delegate);

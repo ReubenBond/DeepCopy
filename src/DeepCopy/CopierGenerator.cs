@@ -9,8 +9,8 @@ namespace DeepCopy
     /// </summary>
     internal sealed class CopierGenerator
     {
-        private readonly CachedReadConcurrentDictionary<(Type originalType, Type parameterType), Delegate> copiers
-            = new CachedReadConcurrentDictionary<(Type originalType, Type parameterType), Delegate>();
+        private readonly Memoizer<(Type originalType, Type parameterType), Delegate> copiers
+            = new Memoizer<(Type originalType, Type parameterType), Delegate>();
         private readonly StaticFieldBuilder fieldBuilder = new StaticFieldBuilder();
         private readonly MethodInfos methodInfos = new MethodInfos();
         private readonly CopyPolicy copyPolicy;
