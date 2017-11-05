@@ -7,8 +7,7 @@ namespace DeepCopy
     /// </summary>
     public sealed class CopyContext
     {
-        private readonly Dictionary<object, object> copies
-            = new Dictionary<object, object>(ReferenceEqualsComparer.Instance);
+        private readonly Dictionary<object, object> copies = new Dictionary<object, object>(16, ReferenceEqualsComparer.Instance);
 
         /// <summary>
         /// Records <paramref name="copy"/> as a copy of <paramref name="original"/>.
@@ -17,10 +16,7 @@ namespace DeepCopy
         /// <param name="copy">The copy of <paramref name="original"/>.</param>
         public void RecordCopy(object original, object copy)
         {
-            if (!this.copies.ContainsKey(original))
-            {
-                this.copies[original] = copy;
-            }
+            copies[original] = copy;
         }
 
         /// <summary>
@@ -28,10 +24,9 @@ namespace DeepCopy
         /// </summary>
         /// <param name="original">The original object.</param>
         /// <returns>The copy of <paramref name="original"/> or <see langword="null"/> if no copy has been made.</returns>
-        public object TryGetCopy(object original)
+        public bool TryGetCopy(object original, out object result)
         {
-            var found = this.copies.TryGetValue(original, out var copy);
-            return found ? copy : null;
+            return copies.TryGetValue(original, out result);
         }
 
         /// <summary>
@@ -39,7 +34,7 @@ namespace DeepCopy
         /// </summary>
         internal void Reset()
         {
-            this.copies.Clear();
+            copies.Clear();
         }
     }
 }

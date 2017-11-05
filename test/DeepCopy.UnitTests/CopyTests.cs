@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using Xunit;
 
 namespace DeepCopy.UnitTests
@@ -32,6 +31,16 @@ namespace DeepCopy.UnitTests
             Assert.Equal(original, result);
             Assert.NotSame(original, result);
         }
+
+        [Fact]
+        public void CanCopyPrimitiveArrays()
+        {
+            var original = new int[] {1, 2, 3};
+            var result = DeepCopier.Copy(original);
+            Assert.Equal(original, result);
+            Assert.NotSame(original, result);
+        }
+
         [Fact]
         public void CanCopyTwoDimensionalArrays()
         {
