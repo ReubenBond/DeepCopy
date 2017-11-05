@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -17,7 +18,7 @@ namespace DeepCopy
             Immutable
         }
 
-        private readonly Memoizer<Type, Policy> policies = new Memoizer<Type, Policy>();
+        private readonly ConcurrentDictionary<Type, Policy> policies = new ConcurrentDictionary<Type, Policy>();
         private readonly RuntimeTypeHandle intPtrTypeHandle = typeof(IntPtr).TypeHandle;
         private readonly RuntimeTypeHandle uIntPtrTypeHandle = typeof(UIntPtr).TypeHandle;
         private readonly Type delegateType = typeof(Delegate);

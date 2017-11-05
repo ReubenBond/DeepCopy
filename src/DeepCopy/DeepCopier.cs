@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.Extensions.ObjectPool;
+﻿using System.Threading;
 
 namespace DeepCopy
 {
@@ -8,9 +7,10 @@ namespace DeepCopy
     /// </summary>
     public static class DeepCopier
     {
-        private static readonly CopyPolicy CopyPolicy = new CopyPolicy();
-        private static readonly CopierGenerator CopierGenerator = new CopierGenerator(CopyPolicy);
-        private static readonly ObjectPool<CopyContext> ContextPool = new DefaultObjectPool<CopyContext>(new ContextPoolPolicy());
+        internal static readonly CopyPolicy CopyPolicy = new CopyPolicy();
+        internal static readonly StaticFieldBuilder FieldBuilder = new StaticFieldBuilder();
+        internal static readonly MethodInfos MethodInfos = new MethodInfos();
+        private static readonly ThreadLocal<CopyContext> Context = new ThreadLocal<CopyContext>(() => new CopyContext());
 
         /// <summary>
         /// Creates and returns a deep copy of the provided object.
@@ -20,14 +20,14 @@ namespace DeepCopy
         /// <returns>A deep copy of the provided object.</returns>
         public static T Copy<T>(T original)
         {
-            var context = ContextPool.Get();
+            var context = Context.Value;
             try
             {
-                return Copy(original, context);
+                return CopierGenerator<T>.Copy(original, context);
             }
             finally
             {
-                ContextPool.Return(context);
+                context.Reset();
             }
         }
 
@@ -42,101 +42,7 @@ namespace DeepCopy
         /// <returns>A deep copy of the provided object.</returns>
         public static T Copy<T>(T original, CopyContext context)
         {
-            if (original == null) return default(T);
-
-            // If this object has already been copied, return that copy.
-            var existingCopy = context.TryGetCopy(original);
-            if (existingCopy != null) return (T)existingCopy;
-
-            var type = original.GetType();
-            if (!type.IsValueType)
-            {
-                // Handle arrays specially.
-                var originalArray = original as Array;
-                if (originalArray != null) return (T)CopyArray(originalArray, context);
-            }
-            
-            var typedCopier = CopierGenerator.GetOrCreateCopier<T>(type);
-            return typedCopier(original, context);
-        }
-
-        /// <summary>
-        /// Returns a copy of the provided array.
-        /// </summary>
-        /// <param name="originalArray">The original array.</param>
-        /// <param name="context">The copy context.</param>
-        /// <returns>A copy of the original array.</returns>
-        private static object CopyArray(Array originalArray, CopyContext context)
-        {
-            // Special-case for empty rank-1 arrays.
-            if (originalArray.Rank == 1 && originalArray.GetLength(0) == 0)
-            {
-                return originalArray;
-            }
-
-            // Special-case for arrays of immutable types.
-            var elementType = originalArray.GetType().GetElementType();
-            if (CopyPolicy.IsImmutable(elementType))
-            {
-                return originalArray.Clone();
-            }
-            
-            var rank = originalArray.Rank;
-            var lengths = new int[rank];
-            for (var i = 0; i < rank; i++)
-                lengths[i] = originalArray.GetLength(i);
-
-            var copyArray = Array.CreateInstance(elementType, lengths);
-            context.RecordCopy(originalArray, copyArray);
-
-            switch (rank)
-            {
-                case 1:
-                    for (var i = 0; i < lengths[0]; i++)
-                        copyArray.SetValue(Copy(originalArray.GetValue(i), context), i);
-                    break;
-                case 2:
-                    for (var i = 0; i < lengths[0]; i++)
-                    for (var j = 0; j < lengths[1]; j++)
-                        copyArray.SetValue(Copy(originalArray.GetValue(i, j), context), i, j);
-                    break;
-                default:
-                    var index = new int[rank];
-                    var sizes = new int[rank];
-                    sizes[rank - 1] = 1;
-                    for (var k = rank - 2; k >= 0; k--)
-                        sizes[k] = sizes[k + 1] * lengths[k + 1];
-
-                    for (var i = 0; i < originalArray.Length; i++)
-                    {
-                        var k = i;
-                        for (var n = 0; n < rank; n++)
-                        {
-                            var offset = k / sizes[n];
-                            k = k - offset * sizes[n];
-                            index[n] = offset;
-                        }
-
-                        copyArray.SetValue(Copy(originalArray.GetValue(index), context), index);
-                    }
-
-                    break;
-            }
-
-            return copyArray;
-        }
-
-        private sealed class ContextPoolPolicy : IPooledObjectPolicy<CopyContext>
-        {
-            /// <inheritdoc />
-            public CopyContext Create() => new CopyContext();
-
-            /// <inheritdoc />
-            public bool Return(CopyContext context)
-            {
-                context.Reset();
-                return true;
-            }
+            return CopierGenerator<T>.Copy(original, context);
         }
     }
 }

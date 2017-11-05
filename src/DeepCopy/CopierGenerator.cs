@@ -1,23 +1,32 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+// ReSharper disable StaticMemberInGenericType
 
 namespace DeepCopy
 {
     /// <summary>
     /// Generates copy delegates.
     /// </summary>
-    internal sealed class CopierGenerator
+    internal static class CopierGenerator<T>
     {
-        private readonly Memoizer<(Type originalType, Type parameterType), Delegate> copiers
-            = new Memoizer<(Type originalType, Type parameterType), Delegate>();
-        private readonly StaticFieldBuilder fieldBuilder = new StaticFieldBuilder();
-        private readonly MethodInfos methodInfos = new MethodInfos();
-        private readonly CopyPolicy copyPolicy;
+        private static readonly ConcurrentDictionary<Type, DeepCopyDelegate<T>> Copiers = new ConcurrentDictionary<Type, DeepCopyDelegate<T>>();
+        private static readonly Type GenericType = typeof(T);
+        private static readonly DeepCopyDelegate<T> MatchingTypeCopier = CreateCopier(GenericType);
+        private static readonly Func<Type, DeepCopyDelegate<T>> GenerateCopier = CreateCopier;
         
-        public CopierGenerator(CopyPolicy copyPolicy)
+        public static T Copy(T original, CopyContext context)
         {
-            this.copyPolicy = copyPolicy;
+            // ReSharper disable once ExpressionIsAlwaysNull
+            if (original == null) return original;
+
+            var type = original.GetType();
+            if (type == GenericType) return MatchingTypeCopier(original, context);
+
+            var result = Copiers.GetOrAdd(type, GenerateCopier);
+            return result(original, context);
         }
 
         /// <summary>
@@ -25,42 +34,41 @@ namespace DeepCopy
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns>A copier for the provided type.</returns>
-        public DeepCopyDelegate<T> GetOrCreateCopier<T>(Type type)
+        private static DeepCopyDelegate<T> CreateCopier(Type type)
         {
-            var parameterType = typeof(T);
-            var key = (type, parameterType);
-            if (!this.copiers.TryGetValue(key, out var untypedCopier))
+            if (type.IsArray)
             {
-                untypedCopier = this.CreateCopier<T>(type);
-                this.copiers.TryAdd(key, untypedCopier);
+                return CreateArrayCopier(type);
             }
-            
-            return (DeepCopyDelegate<T>) untypedCopier;
-        }
 
-        /// <summary>
-        /// Gets a copier for the provided type.
-        /// </summary>
-        /// <param name="type">The type.</param>
-        /// <returns>A copier for the provided type.</returns>
-        private DeepCopyDelegate<T> CreateCopier<T>(Type type)
-        {
-            if (this.copyPolicy.IsImmutable(type)) return (original, context) => original;
+            if (DeepCopier.CopyPolicy.IsImmutable(type)) return (original, context) => original;
 
             // By-ref types are not supported.
-            if (type.IsByRef) return ThrowNotSupportedType<T>(type);
+            if (type.IsByRef) return ThrowNotSupportedType(type);
 
             var dynamicMethod = new DynamicMethod(
                 type.Name + "DeepCopier",
                 typeof(T),
                 new[] {typeof(T), typeof(CopyContext)},
-                typeof(CopierGenerator).Module,
+                typeof(DeepCopier).Module,
                 true);
 
             var il = dynamicMethod.GetILGenerator();
 
             // Declare a variable to store the result.
             il.DeclareLocal(type);
+
+            var hasCopyLabel = il.DefineLabel();
+            if (!type.IsValueType)
+            {
+                // C#: if (context.TryGetCopy(original, out object existingCopy)) return (T)existingCopy;
+                il.DeclareLocal(typeof(object));
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldloca_S, (byte) 1);
+                il.Emit(OpCodes.Call, DeepCopier.MethodInfos.TryGetCopy);
+                il.Emit(OpCodes.Brtrue_S, hasCopyLabel);
+            }
 
             // Construct the result.
             var constructorInfo = type.GetConstructor(Type.EmptyTypes);
@@ -79,9 +87,9 @@ namespace DeepCopy
             else
             {
                 // If no default constructor exists, create an instance using GetUninitializedObject
-                var field = this.fieldBuilder.GetOrCreateStaticField(type);
-                il.Emit(OpCodes.Ldsfld, field);
-                il.Emit(OpCodes.Call, this.methodInfos.GetUninitializedObject);
+                var typeField = DeepCopier.FieldBuilder.GetOrCreateStaticField(type);
+                il.Emit(OpCodes.Ldsfld, typeField);
+                il.Emit(OpCodes.Call, DeepCopier.MethodInfos.GetUninitializedObject);
                 il.Emit(OpCodes.Castclass, type);
                 il.Emit(OpCodes.Stloc_0);
             }
@@ -94,11 +102,11 @@ namespace DeepCopy
                 il.Emit(OpCodes.Ldarg_1);
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldloc_0);
-                il.Emit(OpCodes.Call, this.methodInfos.RecordObject);
+                il.Emit(OpCodes.Call, DeepCopier.MethodInfos.RecordObject);
             }
 
             // Copy each field.
-            foreach (var field in this.copyPolicy.GetCopyableFields(type))
+            foreach (var field in DeepCopier.CopyPolicy.GetCopyableFields(type))
             {
                 // Load a reference to the result.
                 if (type.IsValueType)
@@ -116,11 +124,11 @@ namespace DeepCopy
                 il.Emit(OpCodes.Ldfld, field);
 
                 // Deep-copy the field if needed, otherwise just leave it as-is.
-                if (!this.copyPolicy.IsShallowCopyable(field.FieldType))
+                if (!DeepCopier.CopyPolicy.IsShallowCopyable(field.FieldType))
                 {
-                    // Copy the field using the generic Copy<T> method.
+                    // Copy the field using the generic DeepCopy.Copy<T> method.
                     il.Emit(OpCodes.Ldarg_1);
-                    il.Emit(OpCodes.Call, this.methodInfos.CopyInner.MakeGenericMethod(field.FieldType));
+                    il.Emit(OpCodes.Call, DeepCopier.MethodInfos.CopyInner.MakeGenericMethod(field.FieldType));
                 }
 
                 // Store the copy of the field on the result.
@@ -130,11 +138,57 @@ namespace DeepCopy
             // Return the result.
             il.Emit(OpCodes.Ldloc_0);
             il.Emit(OpCodes.Ret);
+
+            if (!type.IsValueType)
+            {
+                il.MarkLabel(hasCopyLabel);
+                il.Emit(OpCodes.Ldloc_1);
+                il.Emit(OpCodes.Castclass, type);
+                il.Emit(OpCodes.Ret);
+            }
+
             return dynamicMethod.CreateDelegate(typeof(DeepCopyDelegate<T>)) as DeepCopyDelegate<T>;
         }
 
+        private static DeepCopyDelegate<T> CreateArrayCopier(Type type)
+        {
+            var elementType = type.GetElementType();
+
+            var rank = type.GetArrayRank();
+            var shallowCopyable = DeepCopier.CopyPolicy.IsShallowCopyable(elementType);
+            
+            MethodInfo methodInfo;
+            switch (rank)
+            {
+                case 1:
+                    if (shallowCopyable)
+                    {
+                        methodInfo = DeepCopier.MethodInfos.CopyArrayRank1Shallow;
+                    }
+                    else
+                    {
+                        methodInfo = DeepCopier.MethodInfos.CopyArrayRank1;
+                    }
+                    break;
+                case 2:
+                    if (shallowCopyable)
+                    {
+                        methodInfo = DeepCopier.MethodInfos.CopyArrayRank2Shallow;
+                    }
+                    else
+                    {
+                        methodInfo = DeepCopier.MethodInfos.CopyArrayRank2;
+                    }
+                    break;
+                default:
+                    return ArrayCopier.CopyArray;
+            }
+
+            return (DeepCopyDelegate<T>) methodInfo.MakeGenericMethod(elementType).CreateDelegate(typeof(DeepCopyDelegate<T>));
+        }
+        
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static DeepCopyDelegate<T> ThrowNotSupportedType<T>(Type type)
+        private static DeepCopyDelegate<T> ThrowNotSupportedType(Type type)
         {
             throw new NotSupportedException($"Unable to copy object of type {type}.");
         }
