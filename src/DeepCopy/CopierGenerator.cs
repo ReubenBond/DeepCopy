@@ -27,12 +27,6 @@ namespace DeepCopy
         /// <returns>A copier for the provided type.</returns>
         public DeepCopyDelegate<T> GetOrCreateCopier<T>(Type type)
         {
-            if (this.copyPolicy.IsImmutable(type))
-            {
-                T ImmutableCopier(T original, CopyContext context) => original;
-                return ImmutableCopier;
-            }
-
             var parameterType = typeof(T);
             var key = (type, parameterType);
             if (!this.copiers.TryGetValue(key, out var untypedCopier))
@@ -51,6 +45,8 @@ namespace DeepCopy
         /// <returns>A copier for the provided type.</returns>
         private DeepCopyDelegate<T> CreateCopier<T>(Type type)
         {
+            if (this.copyPolicy.IsImmutable(type)) return (original, context) => original;
+
             // By-ref types are not supported.
             if (type.IsByRef) return ThrowNotSupportedType<T>(type);
 
