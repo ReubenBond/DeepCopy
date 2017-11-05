@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Xunit;
 
 namespace DeepCopy.UnitTests
@@ -127,6 +130,53 @@ namespace DeepCopy.UnitTests
             var result = DeepCopier.Copy(original);
             Assert.NotSame(original, result);
             Assert.Same(result.GetReference(), ((Poco) result.GetReference()).Reference);
+        }
+
+        [Theory]
+        [MemberData(nameof(ImmutableTestData))]
+        public void CanCopyImmutables(object original)
+        {
+            var result = DeepCopier.Copy(original);
+            Assert.Equal(result, original);
+        }
+
+        public static IEnumerable<object[]> ImmutableTestData()
+        {
+            yield return new object[] {5m};
+            yield return new object[] {DateTime.Now};
+            yield return new object[] {TimeSpan.MaxValue};
+            yield return new object[] {"Hello World"};
+            yield return new object[] {Guid.NewGuid()};
+            yield return new object[] {DateTimeOffset.Now};
+            yield return new object[] {new Version(1, 0, 0, 0)};
+            yield return new object[] {new Uri("http://localhost")};
+            yield return new object[] {new KeyValuePair<string, string>("Hello", "World")};
+            yield return new object[] { new Tuple<int, string>(5, "hello") };
+            yield return new object[] { new Tuple<int, string, double>(5, "hello", 1d) };
+            yield return new object[] { new Tuple<int, string, double, int>(5, "hello", 1d, 2) };
+            yield return new object[] { new Tuple<int, string, double, int, string>(5, "hello", 1d, 2, "world") };
+            yield return new object[]
+                {new Tuple<int, string, double, int, string, double>(5, "hello", 1d, 2, "world", 3d)};
+            yield return new object[]
+                {new Tuple<int, string, double, int, string, double, int>(5, "hello", 1d, 2, "world", 3d, 7)};
+            yield return new object[]
+            {
+                new Tuple<int, string, double, int, string, double, int, Tuple<string>>(5, "hello", 1d, 2, "world", 3d, 7,
+                    Tuple.Create("universe"))
+            };
+            yield return new object[] { new ValueTuple<int, string>(5, "hello") };
+            yield return new object[] { new ValueTuple<int, string, double>(5, "hello", 1d) };
+            yield return new object[] { new ValueTuple<int, string, double, int>(5, "hello", 1d, 2) };
+            yield return new object[] { new ValueTuple<int, string, double, int, string>(5, "hello", 1d, 2, "world") };
+            yield return new object[]
+                {new ValueTuple<int, string, double, int, string, double>(5, "hello", 1d, 2, "world", 3d)};
+            yield return new object[]
+                {new ValueTuple<int, string, double, int, string, double, int>(5, "hello", 1d, 2, "world", 3d, 7)};
+            yield return new object[]
+            {
+                new ValueTuple<int, string, double, int, string, double, int, ValueTuple<string>>(5, "hello", 1d, 2, "world", 3d, 7,
+                    new ValueTuple<string>("universe"))
+            };
         }
 
         [Immutable]
