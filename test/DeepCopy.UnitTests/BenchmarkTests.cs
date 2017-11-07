@@ -56,6 +56,8 @@ namespace DeepCopy.UnitTests
             public long Long { get; set; }
         }
 
+
+
         [Fact]
         public int SimpleClass_DeepCopy()
         {

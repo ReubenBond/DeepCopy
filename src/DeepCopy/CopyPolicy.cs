@@ -156,6 +156,40 @@ namespace DeepCopy
             return this.policies[type] = Policy.Mutable;
         }
 
+        public bool IsTrackingNecessary(Type type)
+        {
+            if (IsImmutable(type))
+            {
+                return false;
+            }
+            var duplicateCheck = new HashSet<Type> {type}; // if we encounter the root later on, tracking is necessary
+            return IsTrackingNecessary(type, duplicateCheck);
+        }
+
+        private bool IsTrackingNecessary(Type type, HashSet<Type> alreadyChecked)
+        {
+            if (type == typeof(object)) // we can't reason about object
+            {
+                return true;
+            }
+            var fields = GetCopyableFields(type);
+            foreach (var fieldInfo in fields)
+            {
+                var fieldType = fieldInfo.FieldType;                
+                var isImmutableField = IsImmutable(fieldType);
+                if (isImmutableField)
+                {
+                    continue;
+                }
+                // we assume that any non-immutable type which was already checked requires tracking
+                if (!alreadyChecked.Add(fieldType) || IsTrackingNecessary(fieldType, alreadyChecked))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         /// <summary>
         /// A comparer for <see cref="FieldInfo"/> which compares by name.
         /// </summary>

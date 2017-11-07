@@ -119,6 +119,28 @@ namespace DeepCopy.UnitTests
         }
 
         [Fact]
+        public void CanCopyCyclicObjectsWithChildren()
+        {
+            var original = new CyclicPocoWithChildren();
+            original.Children.Add(original);
+
+            var result = DeepCopier.Copy(original);
+            Assert.NotSame(original, result);
+            Assert.Same(result, result.Children[0]);
+        }
+
+        [Fact]
+        public void CanCopyCyclicObjectsWithSibling()
+        {
+            var original = new CyclicPocoWithSibling();
+            original.Sibling = original;
+
+            var result = DeepCopier.Copy(original);
+            Assert.NotSame(original, result);
+            Assert.Same(result, result.Sibling);
+        }
+
+        [Fact]
         public void ReferencesInArraysArePreserved()
         {
             var poco = new Poco();
@@ -197,6 +219,16 @@ namespace DeepCopy.UnitTests
         private class Poco
         {
             public object Reference { get; set; }
+        }
+
+        private class CyclicPocoWithChildren
+        {
+            public List<CyclicPocoWithChildren> Children { get; set; } = new List<CyclicPocoWithChildren>();
+        }
+
+        private class CyclicPocoWithSibling
+        {
+            public CyclicPocoWithSibling Sibling { get; set; }
         }
 
         private class PocoWithPrivateReadonly
