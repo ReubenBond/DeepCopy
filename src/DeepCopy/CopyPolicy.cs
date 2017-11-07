@@ -34,6 +34,7 @@ namespace DeepCopy
             this.policies[typeof(Version)] = Policy.Immutable;
             this.policies[typeof(Uri)] = Policy.Immutable;
             this.policies[typeof(KeyValuePair<,>)] = Policy.Immutable;
+            this.policies[typeof(Tuple<>)] = Policy.Immutable;
             this.policies[typeof(Tuple<,>)] = Policy.Immutable;
             this.policies[typeof(Tuple<,,>)] = Policy.Immutable;
             this.policies[typeof(Tuple<,,,>)] = Policy.Immutable;
@@ -42,6 +43,7 @@ namespace DeepCopy
             this.policies[typeof(Tuple<,,,,,>)] = Policy.Immutable;
             this.policies[typeof(Tuple<,,,,,,>)] = Policy.Immutable;
             this.policies[typeof(Tuple<,,,,,,,>)] = Policy.Immutable;
+            this.policies[typeof(ValueTuple<>)] = Policy.Immutable;
             this.policies[typeof(ValueTuple<,>)] = Policy.Immutable;
             this.policies[typeof(ValueTuple<,,>)] = Policy.Immutable;
             this.policies[typeof(ValueTuple<,,,>)] = Policy.Immutable;
@@ -135,7 +137,12 @@ namespace DeepCopy
 
             if (type.IsGenericType && this.policies.TryGetValue(type.GetGenericTypeDefinition(), out result))
             {
-                return result;
+                if (result == Policy.Immutable)
+                {
+                    var generigArgs = type.GetGenericArguments();
+                    result = generigArgs.All(IsImmutable) ? Policy.Immutable : Policy.Mutable;
+                }
+                return this.policies[type] = result;
             }
 
             if (type.IsPointer) return Policy.Immutable;
@@ -144,7 +151,7 @@ namespace DeepCopy
             if (handle.Equals(this.intPtrTypeHandle)) return Policy.Immutable;
             if (handle.Equals(this.uIntPtrTypeHandle)) return Policy.Immutable;
             if (this.delegateType.IsAssignableFrom(type)) return Policy.Immutable;
-            
+
             if (type.IsValueType && !type.IsGenericType && !type.IsGenericTypeDefinition)
             {
                 if (this.GetCopyableFields(type).All(f => f.FieldType != type && this.IsShallowCopyable(f.FieldType)))
@@ -152,7 +159,7 @@ namespace DeepCopy
                     return this.policies[type] = Policy.ShallowCopyable;
                 }
             }
-            
+
             return this.policies[type] = Policy.Mutable;
         }
 

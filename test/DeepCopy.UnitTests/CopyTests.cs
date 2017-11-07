@@ -35,7 +35,7 @@ namespace DeepCopy.UnitTests
         [Fact]
         public void CanCopyPrimitiveArrays()
         {
-            var original = new int[] {1, 2, 3};
+            var original = new int[] { 1, 2, 3 };
             var result = DeepCopier.Copy(original);
             Assert.Equal(original, result);
             Assert.NotSame(original, result);
@@ -102,7 +102,7 @@ namespace DeepCopy.UnitTests
         [Fact]
         public void ImmutableWrapperTypesAreNotCopied()
         {
-            var original = Immutable.Create(new object[] { 123, "hello!" } );
+            var original = Immutable.Create(new object[] { 123, "hello!" });
             var result = DeepCopier.Copy(original);
             Assert.Same(original.Value, result.Value);
         }
@@ -138,7 +138,26 @@ namespace DeepCopy.UnitTests
 
             var result = DeepCopier.Copy(original);
             Assert.NotSame(original, result);
-            Assert.Same(result.GetReference(), ((Poco) result.GetReference()).Reference);
+            Assert.Same(result.GetReference(), ((Poco)result.GetReference()).Reference);
+        }
+
+        [Fact]
+        public void CanCopyMutableKeyValuePair()
+        {
+            var original = new KeyValuePair<string, Poco>("Hello", new Poco());
+            var result = DeepCopier.Copy(original);
+            Assert.Same(original.Key, result.Key);
+            Assert.NotSame(original.Value, result.Value);
+        }
+
+        [Fact]
+        public void CanCopyMutableValueTupleRest()
+        {
+            var original = new ValueTuple<int, string, double, int, string, double, int, ValueTuple<Poco>>(5, "hello",
+                1d, 2, "world", 3d, 7,
+                new ValueTuple<Poco>(new Poco()));
+            var result = DeepCopier.Copy(original);
+            Assert.NotEqual(original.Rest, result.Rest);
         }
 
         [Theory]
@@ -151,15 +170,16 @@ namespace DeepCopy.UnitTests
 
         public static IEnumerable<object[]> ImmutableTestData()
         {
-            yield return new object[] {5m};
-            yield return new object[] {DateTime.Now};
-            yield return new object[] {TimeSpan.MaxValue};
-            yield return new object[] {"Hello World"};
-            yield return new object[] {Guid.NewGuid()};
-            yield return new object[] {DateTimeOffset.Now};
-            yield return new object[] {new Version(1, 0, 0, 0)};
-            yield return new object[] {new Uri("http://localhost")};
-            yield return new object[] {new KeyValuePair<string, string>("Hello", "World")};
+            yield return new object[] { 5m };
+            yield return new object[] { DateTime.Now };
+            yield return new object[] { TimeSpan.MaxValue };
+            yield return new object[] { "Hello World" };
+            yield return new object[] { Guid.NewGuid() };
+            yield return new object[] { DateTimeOffset.Now };
+            yield return new object[] { new Version(1, 0, 0, 0) };
+            yield return new object[] { new Uri("http://localhost") };
+            yield return new object[] { new KeyValuePair<string, string>("Hello", "World") };
+            yield return new object[] { new Tuple<int>(5) };
             yield return new object[] { new Tuple<int, string>(5, "hello") };
             yield return new object[] { new Tuple<int, string, double>(5, "hello", 1d) };
             yield return new object[] { new Tuple<int, string, double, int>(5, "hello", 1d, 2) };
@@ -173,6 +193,7 @@ namespace DeepCopy.UnitTests
                 new Tuple<int, string, double, int, string, double, int, Tuple<string>>(5, "hello", 1d, 2, "world", 3d, 7,
                     Tuple.Create("universe"))
             };
+            yield return new object[] { new ValueTuple<int>(5) };
             yield return new object[] { new ValueTuple<int, string>(5, "hello") };
             yield return new object[] { new ValueTuple<int, string, double>(5, "hello", 1d) };
             yield return new object[] { new ValueTuple<int, string, double, int>(5, "hello", 1d, 2) };
