@@ -139,8 +139,7 @@ namespace DeepCopy
             {
                 if (result == Policy.Immutable)
                 {
-                    var generigArgs = type.GetGenericArguments();
-                    result = generigArgs.All(IsImmutable) ? Policy.Immutable : Policy.Mutable;
+                    result = type.GetGenericArguments().All(IsImmutable) ? Policy.Immutable : Policy.Mutable;
                 }
                 return this.policies[type] = result;
             }
