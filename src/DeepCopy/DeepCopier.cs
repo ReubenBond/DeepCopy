@@ -8,7 +8,6 @@ namespace DeepCopy
     public static class DeepCopier
     {
         internal static readonly CopyPolicy CopyPolicy = new CopyPolicy();
-        internal static readonly StaticFieldBuilder FieldBuilder = new StaticFieldBuilder();
         internal static readonly MethodInfos MethodInfos = new MethodInfos();
         private static readonly ThreadLocal<CopyContext> Context = new ThreadLocal<CopyContext>(() => new CopyContext());
 
