@@ -87,8 +87,8 @@ namespace DeepCopy
             else
             {
                 // If no default constructor exists, create an instance using GetUninitializedObject
-                var typeField = DeepCopier.FieldBuilder.GetOrCreateStaticField(type);
-                il.Emit(OpCodes.Ldsfld, typeField);
+                il.Emit(OpCodes.Ldtoken, type);
+                il.Emit(OpCodes.Call, DeepCopier.MethodInfos.GetTypeFromHandle);
                 il.Emit(OpCodes.Call, DeepCopier.MethodInfos.GetUninitializedObject);
                 il.Emit(OpCodes.Castclass, type);
                 il.Emit(OpCodes.Stloc_0);
