@@ -33,6 +33,23 @@ namespace DeepCopy.UnitTests
         }
 
         [Fact]
+        public void CanCopyCollections()
+        {
+            {
+                var original = new HashSet<int>(new[] { 123, 4, 5, 6 });
+                var result = DeepCopier.Copy(original);
+                Assert.Equal(original, result);
+                Assert.NotSame(original, result);
+            }
+            {
+                var original = new Dictionary<int, int> {[1] = 1, [2] = 2};
+                var result = DeepCopier.Copy(original);
+                Assert.Equal(original, result);
+                Assert.NotSame(original, result);
+            }
+        }
+
+        [Fact]
         public void CanCopyPrimitiveArrays()
         {
             var original = new int[] { 1, 2, 3 };

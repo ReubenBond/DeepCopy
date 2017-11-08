@@ -67,7 +67,7 @@ namespace DeepCopy
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldloca_S, (byte) 1);
                 il.Emit(OpCodes.Call, DeepCopier.MethodInfos.TryGetCopy);
-                il.Emit(OpCodes.Brtrue_S, hasCopyLabel);
+                il.Emit(OpCodes.Brtrue, hasCopyLabel);
             }
 
             // Construct the result.
