@@ -59,7 +59,8 @@ namespace DeepCopy
             il.DeclareLocal(type);
 
             var hasCopyLabel = il.DefineLabel();
-            if (!type.IsValueType)
+            var isTrackingNecessary = DeepCopier.CopyPolicy.IsTrackingNecessary(type);
+            if (isTrackingNecessary)
             {
                 // C#: if (context.TryGetCopy(original, out object existingCopy)) return (T)existingCopy;
                 il.DeclareLocal(typeof(object));
@@ -96,7 +97,7 @@ namespace DeepCopy
 
             // An instance of a value types can never appear multiple times in an object graph,
             // so only record reference types in the context.
-            if (!type.IsValueType)
+            if (isTrackingNecessary)
             {
                 // Record the object.
                 il.Emit(OpCodes.Ldarg_1);
