@@ -4,7 +4,7 @@ namespace DeepCopy
 {
     internal static class ArrayCopier
     {
-        internal static T[] CopyArrayRank1<T>(T[] originalArray, CopyContext context) where T: class 
+        internal static T[] CopyArrayRank1<T>(T[] originalArray, CopyContext context)
         {
             if (context.TryGetCopy(originalArray, out var existingCopy)) return (T[]) existingCopy;
             var length = originalArray.Length;
