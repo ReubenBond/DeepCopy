@@ -271,6 +271,39 @@ namespace DeepCopy.UnitTests
             Assert.Equal(result, original);
         }
 
+        [Fact]
+        public void CanCopyCyclicObjectsWithChildren()
+        {
+            var original = new CyclicPocoWithChildren();
+            original.Children.Add(original);
+
+            var result = DeepCopier.Copy(original);
+            Assert.NotSame(original, result);
+            Assert.Same(result, result.Children[0]);
+        }
+
+        [Fact]
+        public void CanCopyCyclicObjectsWithSibling()
+        {
+            var original = new CyclicPocoWithSibling();
+            original.Sibling = original;
+
+            var result = DeepCopier.Copy(original);
+            Assert.NotSame(original, result);
+            Assert.Same(result, result.Sibling);
+        }
+
+        [Fact]
+        public void CanCopyCyclicObjectsWithBaseSibling()
+        {
+            var original = new CyclicPocoWithBaseSibling();
+            original.BaseSibling = original;
+
+            var result = DeepCopier.Copy(original);
+            Assert.NotSame(original, result);
+            Assert.Same(result, result.BaseSibling);
+        }
+
         public static IEnumerable<object[]> ImmutableTestData()
         {
             yield return new object[] { 5m };
@@ -332,6 +365,26 @@ namespace DeepCopy.UnitTests
             }
 
             public object GetReference() => this.reference;
+        }
+
+        private class CyclicPocoWithChildren : CyclicPocoBaseSibling
+        {
+            public List<CyclicPocoWithChildren> Children { get; set; } = new List<CyclicPocoWithChildren>();
+        }
+
+        private class CyclicPocoWithSibling : CyclicPocoBaseSibling
+        {
+            public CyclicPocoWithSibling Sibling { get; set; }
+        }
+
+        private class CyclicPocoWithBaseSibling : CyclicPocoBaseSibling
+        {
+            public CyclicPocoBaseSibling BaseSibling { get; set; }
+        }
+
+        private class CyclicPocoBaseSibling
+        {
+            public string Name { get; set; }
         }
     }
 }

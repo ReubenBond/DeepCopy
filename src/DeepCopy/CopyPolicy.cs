@@ -92,7 +92,7 @@ namespace DeepCopy
             {                
                 var copyableFields = GetCopyableFields(type);
                 var queue = new Queue<FieldInfo>(copyableFields);
-                var duplicateCheck = new HashSet<Type>(AssignableFromEqualityComparer.Instance);
+                var duplicateCheck = new HashSet<Type>(AssignableFromEqualityComparer.Instance) {type}; // add root
                 while (queue.Count > 0)
                 {
                     var current = queue.Dequeue();
