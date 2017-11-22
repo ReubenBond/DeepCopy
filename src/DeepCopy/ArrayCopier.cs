@@ -7,6 +7,7 @@ namespace DeepCopy
         internal static T[] CopyArrayRank1<T>(T[] originalArray, CopyContext context)
         {
             if (context.TryGetCopy(originalArray, out var existingCopy)) return (T[]) existingCopy;
+
             var length = originalArray.Length;
             var result = new T[length];
             context.RecordCopy(originalArray, result);
@@ -39,20 +40,22 @@ namespace DeepCopy
             var result = new T[lenI, lenJ];
             context.RecordCopy(originalArray, result);
             for (var i = 0; i < lenI; i++)
-            for (var j = 0; j < lenJ; j++)
             {
-                var original = originalArray[i, j];
-                if (original != null)
+                for (var j = 0; j < lenJ; j++)
                 {
-                    if (context.TryGetCopy(original, out var existingElement))
+                    var original = originalArray[i, j];
+                    if (original != null)
                     {
-                        result[i, j] = (T) existingElement;
-                    }
-                    else
-                    {
-                        var copy = CopierGenerator<T>.Copy(original, context);
-                        context.RecordCopy(original, copy);
-                        result[i, j] = copy;
+                        if (context.TryGetCopy(original, out var existingElement))
+                        {
+                            result[i, j] = (T) existingElement;
+                        }
+                        else
+                        {
+                            var copy = CopierGenerator<T>.Copy(original, context);
+                            context.RecordCopy(original, copy);
+                            result[i, j] = copy;
+                        }
                     }
                 }
             }
