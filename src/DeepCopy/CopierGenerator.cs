@@ -58,8 +58,9 @@ namespace DeepCopy
             // Declare a variable to store the result.
             il.DeclareLocal(type);
 
+            var needsTracking = DeepCopier.CopyPolicy.NeedsTracking(type);
             var hasCopyLabel = il.DefineLabel();
-            if (!type.IsValueType)
+            if (needsTracking)
             {
                 // C#: if (context.TryGetCopy(original, out object existingCopy)) return (T)existingCopy;
                 il.DeclareLocal(typeof(object));
@@ -96,7 +97,7 @@ namespace DeepCopy
 
             // An instance of a value types can never appear multiple times in an object graph,
             // so only record reference types in the context.
-            if (!type.IsValueType)
+            if (needsTracking)
             {
                 // Record the object.
                 il.Emit(OpCodes.Ldarg_1);
@@ -124,7 +125,7 @@ namespace DeepCopy
                 il.Emit(OpCodes.Ldfld, field);
 
                 // Deep-copy the field if needed, otherwise just leave it as-is.
-                if (!DeepCopier.CopyPolicy.IsShallowCopyable(field.FieldType))
+                if (!DeepCopier.CopyPolicy.IsImmutable(field.FieldType))
                 {
                     // Copy the field using the generic DeepCopy.Copy<T> method.
                     il.Emit(OpCodes.Ldarg_1);
@@ -139,7 +140,7 @@ namespace DeepCopy
             il.Emit(OpCodes.Ldloc_0);
             il.Emit(OpCodes.Ret);
 
-            if (!type.IsValueType)
+            if (needsTracking)
             {
                 il.MarkLabel(hasCopyLabel);
                 il.Emit(OpCodes.Ldloc_1);
@@ -155,23 +156,22 @@ namespace DeepCopy
             var elementType = type.GetElementType();
 
             var rank = type.GetArrayRank();
-            var shallowCopyable = DeepCopier.CopyPolicy.IsShallowCopyable(elementType);
-            
+            var isImmutable = DeepCopier.CopyPolicy.IsImmutable(elementType);
             MethodInfo methodInfo;
             switch (rank)
             {
                 case 1:
-                    if (shallowCopyable)
+                    if (isImmutable)
                     {
                         methodInfo = DeepCopier.MethodInfos.CopyArrayRank1Shallow;
                     }
                     else
                     {
-                        methodInfo = DeepCopier.MethodInfos.CopyArrayRank1;
+                        methodInfo = DeepCopier.MethodInfos.CopyArrayRank1Class;
                     }
                     break;
                 case 2:
-                    if (shallowCopyable)
+                    if (isImmutable)
                     {
                         methodInfo = DeepCopier.MethodInfos.CopyArrayRank2Shallow;
                     }

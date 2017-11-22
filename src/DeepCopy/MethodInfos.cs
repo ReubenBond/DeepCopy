@@ -36,7 +36,7 @@ namespace DeepCopy
         public readonly MethodInfo GetTypeFromHandle;
 
         public readonly MethodInfo CopyArrayRank1Shallow;
-        public readonly MethodInfo CopyArrayRank1;
+        public readonly MethodInfo CopyArrayRank1Class;
 
         public readonly MethodInfo CopyArrayRank2Shallow;
         public readonly MethodInfo CopyArrayRank2;
@@ -50,7 +50,7 @@ namespace DeepCopy
             this.RecordObject = GetActionCall((CopyContext ctx) => ctx.RecordCopy(default(object), default(object)));
 
             this.CopyArrayRank1Shallow = GetFuncCall(() => ArrayCopier.CopyArrayRank1Shallow(default(object[]), default(CopyContext))).GetGenericMethodDefinition();
-            this.CopyArrayRank1 = GetFuncCall(() => ArrayCopier.CopyArrayRank1(default(object[]), default(CopyContext))).GetGenericMethodDefinition();
+            this.CopyArrayRank1Class = GetFuncCall(() => ArrayCopier.CopyArrayRank1(default(object[]), default(CopyContext))).GetGenericMethodDefinition();
 
             this.CopyArrayRank2Shallow = GetFuncCall(() => ArrayCopier.CopyArrayRank2Shallow(default(object[,]), default(CopyContext))).GetGenericMethodDefinition();
             this.CopyArrayRank2 = GetFuncCall(() => ArrayCopier.CopyArrayRank2(default(object[,]), default(CopyContext))).GetGenericMethodDefinition();

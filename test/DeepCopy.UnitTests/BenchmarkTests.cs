@@ -1,20 +1,24 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace DeepCopy.UnitTests
 {
     [Trait("TestCategory", "BenchmarkBVT")]
     public class BenchmarkTests
     {
+        private readonly ITestOutputHelper _outputHelper;
         private readonly SimpleClass _simpleClass;
         private readonly List<int> _listOfInts;
         private readonly List<SimpleClass> _listOfSimpleClassSameInstance;
         private readonly List<SimpleClass> _listOfSimpleClassDifferentInstances;
         private readonly List<SimpleStruct> _listOfSimpleStruct;
 
-        public BenchmarkTests()
+        public BenchmarkTests(ITestOutputHelper outputHelper)
         {
+            _outputHelper = outputHelper;
             this._simpleClass = new SimpleClass()
             {
                 Int = 10,
@@ -73,6 +77,14 @@ namespace DeepCopy.UnitTests
         [Fact]
         public int ListOfSimpleClassSameInstance_DeepCopy()
         {
+            //Stopwatch sw = new Stopwatch();
+            //sw.Start();
+            //for (int i = 0; i < 10000; i++)
+            //{
+            //    var clone = DeepCopier.Copy(this._listOfSimpleClassSameInstance);
+            //}
+            //sw.Stop();
+            //_outputHelper.WriteLine("Elapsed: {0}", sw.Elapsed.TotalMilliseconds);
             var clone = DeepCopier.Copy(this._listOfSimpleClassSameInstance);
             return clone.Count;
         }

@@ -23,7 +23,7 @@ namespace DeepCopy.Benchmarks
                 ULong = 1516524352UL,
                 Double = 1235.1235762,
                 Float = 1.333F,
-                String = "Lorem ipsum ...",
+                String = "Lorem ipsum ..."
             };
 
             this._listOfInts = Enumerable.Range(0, 10000).ToList();

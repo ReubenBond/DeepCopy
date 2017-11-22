@@ -33,6 +33,83 @@ namespace DeepCopy.UnitTests
         }
 
         [Fact]
+        public void CanCopyArraysTwoDimensional()
+        {
+            var original = new object[][] {new object[] {123, "hello!"}, new object[] {123, "hello!"}};
+            var result = DeepCopier.Copy(original);
+            Assert.Equal(original, result);
+            Assert.NotSame(original, result);
+        }
+
+        [Fact]
+        public void CanCopyArraysRank3()
+        {
+            var original = new object[,,] { { { "Hello", 2, "World" }, { 300.0f, "World", 33 } }, { { 92, 5.0m, 135 }, { 30, true, 3 } } };
+            var result = DeepCopier.Copy(original);
+            Assert.Equal(original, result);
+            Assert.NotSame(original, result);
+        }
+
+        [Fact]
+        public void CanCopyArraysRank3WithImmutable()
+        {
+            var immutable = new ImmutablePoco();
+            var original = new object[,,]
+            {
+                {
+                    {"Hello", 2, immutable},
+                    {300.0f, immutable, 33}
+                },
+                {
+                    {immutable, 5.0m, 135},
+                    {30, immutable, 3}
+                }
+            };
+            var result = DeepCopier.Copy(original);
+            Assert.Equal(original, result);
+            Assert.NotSame(original, result);
+            Assert.Same(immutable, result[0, 0, 2]);
+            Assert.Same(immutable, result[0, 1, 1]);
+            Assert.Same(immutable, result[1, 0, 0]);
+            Assert.Same(immutable, result[1, 1, 1]);
+        }
+
+        [Fact]
+        public void CanCopyThreeDimensionalArrays()
+        {
+            var original = new object[][][]
+            {
+                new object[][]
+                {
+                    new object[] {123, "hello!"}
+                },
+                new object[][]
+                {
+                    new object[] {123, "hello!", "world"},
+                    new object[] {123, "hello!"}
+                },
+            };
+            var result = DeepCopier.Copy(original);
+            Assert.Equal(original, result);
+            Assert.NotSame(original, result);
+        }
+
+        [Fact]
+        public void CanCopyJaggedMultidimensionalArrays()
+        {
+            var original = new object[3][,]
+            {
+                new object[,] {{123, "hello!"}, {5, 7}},
+                new object[,] {{456, "world"}, {4, 6}, {"hello", "world"}},
+                new object[,] {{789, "universe"}, {99, 88}, {0, 9}}
+            };
+
+            var result = DeepCopier.Copy(original);
+            Assert.Equal(original, result);
+            Assert.NotSame(original, result);
+        }
+
+        [Fact]
         public void CanCopyCollections()
         {
             {
@@ -59,7 +136,16 @@ namespace DeepCopy.UnitTests
         }
 
         [Fact]
-        public void CanCopyTwoDimensionalArrays()
+        public void CanCopyPrimitiveArraysRank3()
+        {
+            var original = new int[,,] { { { 12, 2, 35 }, { 300, 78, 33 } }, { { 92, 42, 135 }, { 30, 7, 3 } } };
+            var result = DeepCopier.Copy(original);
+            Assert.Equal(original, result);
+            Assert.NotSame(original, result);
+        }
+
+        [Fact]
+        public void CanCopyPrimitiveTwoDimensionalArraysShallow()
         {
             var original = new int[][]
             {
@@ -73,7 +159,7 @@ namespace DeepCopy.UnitTests
         }
 
         [Fact]
-        public void CanCopyThreeDimensionalArrays()
+        public void CanCopyPrimitiveThreeDimensionalArrays()
         {
             var original = new int[][][]
             {
@@ -93,7 +179,7 @@ namespace DeepCopy.UnitTests
         }
 
         [Fact]
-        public void CanCopyJaggedMultidimensionalArrays()
+        public void CanCopyPrimitiveJaggedMultidimensionalArrays()
         {
             var original = new int[3][,]
             {
