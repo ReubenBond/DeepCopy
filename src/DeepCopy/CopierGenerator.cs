@@ -167,7 +167,7 @@ namespace DeepCopy
                     }
                     else
                     {
-                        methodInfo = DeepCopier.MethodInfos.CopyArrayRank1Class;
+                        methodInfo = DeepCopier.MethodInfos.CopyArrayRank1;
                     }
                     break;
                 case 2:
