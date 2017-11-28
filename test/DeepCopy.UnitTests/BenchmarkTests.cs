@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace DeepCopy.UnitTests
 {
@@ -29,8 +31,8 @@ namespace DeepCopy.UnitTests
             this._listOfInts = Enumerable.Range(0, 10000).ToList();
 
             this._listOfSimpleClassSameInstance = Enumerable.Repeat(this._simpleClass, 10000).ToList();
-            this._listOfSimpleClassDifferentInstances = Enumerable.Range(0, 10000).Select(x => new SimpleClass() {Int = x}).ToList();
-            this._listOfSimpleStruct = Enumerable.Range(0, 10000).Select(x => new SimpleStruct() {Int = x}).ToList();
+            this._listOfSimpleClassDifferentInstances = Enumerable.Range(0, 10000).Select(x => new SimpleClass() { Int = x }).ToList();
+            this._listOfSimpleStruct = Enumerable.Range(0, 10000).Select(x => new SimpleStruct() { Int = x }).ToList();
         }
 
         public class SimpleClassBase
@@ -57,38 +59,48 @@ namespace DeepCopy.UnitTests
         }
 
         [Fact]
-        public int SimpleClass_DeepCopy()
+        public void SimpleClass_DeepCopy()
         {
             var clone = DeepCopier.Copy(this._simpleClass);
-            return clone.Int;
+            Assert.NotSame(clone, this._simpleClass);
         }
 
         [Fact]
-        public int ListOfInts_DeepCopy()
+        public void ListOfInts_DeepCopy()
         {
             var clone = DeepCopier.Copy(this._listOfInts);
-            return clone.Count;
+            Assert.NotSame(clone, this._listOfInts);
         }
 
         [Fact]
-        public int ListOfSimpleClassSameInstance_DeepCopy()
+        public void ListOfSimpleClassSameInstance_DeepCopy()
         {
             var clone = DeepCopier.Copy(this._listOfSimpleClassSameInstance);
-            return clone.Count;
+            Assert.NotSame(clone, this._listOfSimpleClassSameInstance);
+            var firstInstance = clone[0];
+            for (int i = 1; i < clone.Count; i++)
+            {
+                Assert.Same(firstInstance, clone[i]);
+            }
         }
 
         [Fact]
-        public int ListOfSimpleClassDifferentInstances_DeepCopy()
+        public void ListOfSimpleClassDifferentInstances_DeepCopy()
         {
             var clone = DeepCopier.Copy(this._listOfSimpleClassDifferentInstances);
-            return clone.Count;
+            Assert.NotSame(clone, this._listOfSimpleClassDifferentInstances);
+            var firstInstance = clone[0];
+            for (int i = 1; i < clone.Count; i++)
+            {
+                Assert.NotSame(firstInstance, clone[i]);
+            }
         }
 
         [Fact]
-        public int ListOfStruct_DeepCopy()
+        public void ListOfStruct_DeepCopy()
         {
             var clone = DeepCopier.Copy(this._listOfSimpleStruct);
-            return clone.Count;
+            Assert.NotSame(clone, this._listOfSimpleClassDifferentInstances);
         }
     }
 }

@@ -6,12 +6,28 @@ namespace DeepCopy
     {
         internal static T[] CopyArrayRank1<T>(T[] originalArray, CopyContext context)
         {
-            if (context.TryGetCopy(originalArray, out var existingCopy)) return (T[])existingCopy;
+            if (context.TryGetCopy(originalArray, out var existingCopy)) return (T[]) existingCopy;
 
             var length = originalArray.Length;
             var result = new T[length];
             context.RecordCopy(originalArray, result);
-            for (var i = 0; i < length; i++) result[i] = CopierGenerator<T>.Copy(originalArray[i], context);
+            for (var i = 0; i < length; i++)
+            {
+                var original = originalArray[i];
+                if (original != null)
+                {
+                    if (context.TryGetCopy(original, out var existingElement))
+                    {
+                        result[i] = (T) existingElement;
+                    }
+                    else
+                    {
+                        var copy = CopierGenerator<T>.Copy(original, context);
+                        context.RecordCopy(original, copy);
+                        result[i] = copy;
+                    }
+                }
+            }
             return result;
         }
 
@@ -23,7 +39,26 @@ namespace DeepCopy
             var lenJ = originalArray.GetLength(1);
             var result = new T[lenI, lenJ];
             context.RecordCopy(originalArray, result);
-            for (var i = 0; i < lenI; i++) for (var j = 0; j < lenJ; j++) result[i, j] = CopierGenerator<T>.Copy(originalArray[i, j], context);
+            for (var i = 0; i < lenI; i++)
+            {
+                for (var j = 0; j < lenJ; j++)
+                {
+                    var original = originalArray[i, j];
+                    if (original != null)
+                    {
+                        if (context.TryGetCopy(original, out var existingElement))
+                        {
+                            result[i, j] = (T) existingElement;
+                        }
+                        else
+                        {
+                            var copy = CopierGenerator<T>.Copy(original, context);
+                            context.RecordCopy(original, copy);
+                            result[i, j] = copy;
+                        }
+                    }
+                }
+            }
             return result;
         }
 
@@ -50,23 +85,25 @@ namespace DeepCopy
             return result;
         }
 
-        internal static T CopyArray<T>(T original, CopyContext context)
+        internal static T CopyArray<T>(T array, CopyContext context)
         {
-            if (context.TryGetCopy(original, out var existingCopy)) return (T)existingCopy;
+            if (context.TryGetCopy(array, out var existingCopy)) return (T)existingCopy;
 
-            var originalArray = original as Array;
-            if (originalArray == null) throw new InvalidCastException($"Cannot cast non-array type {original?.GetType()} to Array.");
-            var elementType = original.GetType().GetElementType();
+            var originalArray = array as Array;
+            if (originalArray == null) throw new InvalidCastException($"Cannot cast non-array type {array?.GetType()} to Array.");
+            var elementType = array.GetType().GetElementType();
             
             var rank = originalArray.Rank;
             var lengths = new int[rank];
             for (var i = 0; i < rank; i++)
+            {
                 lengths[i] = originalArray.GetLength(i);
+            }
 
             var copyArray = Array.CreateInstance(elementType, lengths);
             context.RecordCopy(originalArray, copyArray);
 
-            if (DeepCopier.CopyPolicy.IsShallowCopyable(elementType))
+            if (DeepCopier.CopyPolicy.IsImmutable(elementType))
             {
                 Array.Copy(originalArray, copyArray, originalArray.Length);
             }
@@ -75,8 +112,9 @@ namespace DeepCopy
             var sizes = new int[rank];
             sizes[rank - 1] = 1;
             for (var k = rank - 2; k >= 0; k--)
+            {
                 sizes[k] = sizes[k + 1] * lengths[k + 1];
-
+            }
             for (var i = 0; i < originalArray.Length; i++)
             {
                 var k = i;
@@ -86,8 +124,20 @@ namespace DeepCopy
                     k = k - offset * sizes[n];
                     index[n] = offset;
                 }
-
-                copyArray.SetValue(DeepCopier.Copy(originalArray.GetValue(index), context), index);
+                var original = originalArray.GetValue(index);
+                if (original != null)
+                {
+                    if (context.TryGetCopy(original, out var existingElement))
+                    {
+                        copyArray.SetValue(existingElement, index);
+                    }
+                    else
+                    {
+                        var copy = DeepCopier.Copy(originalArray.GetValue(index), context);
+                        context.RecordCopy(original, copy);
+                        copyArray.SetValue(copy, index);
+                    }
+                }
             }
 
             return (T)(object)copyArray;
