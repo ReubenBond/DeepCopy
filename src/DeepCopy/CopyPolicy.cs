@@ -149,7 +149,7 @@ namespace DeepCopy
                 return this.policies[type] = Policy.Immutable;
             }
 
-            if (type.IsInterface)
+            if (type.IsInterface || type.IsAbstract)
             {
                 return this.policies[type] = Policy.Mutable;
             }

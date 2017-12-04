@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Xunit;
 
@@ -120,6 +121,19 @@ namespace DeepCopy.UnitTests
 
             Assert.NotSame(original, result); 
             Assert.NotSame(original.Collection, result.Collection);
+        }
+
+        [Fact]
+        public void CanCopyAbstractBaseClassField()
+        {
+            PocoWithAbstractBaseClass original =
+                new PocoWithAbstractBaseClass(new DerivedClass());
+
+
+            var result = DeepCopier.Copy(original);
+
+            Assert.NotSame(original, result);
+            Assert.NotSame(original.Child, result.Child);
         }
 
         [Fact]
@@ -374,6 +388,15 @@ namespace DeepCopy.UnitTests
             public readonly ICollection<string> Collection = new List<string>();
         }
 
+        private class PocoWithAbstractBaseClass
+        {
+            public PocoWithAbstractBaseClass(AbstractBaseClass child)
+            {
+                Child = child;
+            }
+            public readonly AbstractBaseClass Child;
+        }
+
         private class PocoWithPrivateReadonly
         {
             private readonly object reference;
@@ -403,6 +426,16 @@ namespace DeepCopy.UnitTests
         private class CyclicPocoBaseSibling
         {
             public string Name { get; set; }
+        }
+
+        private abstract class AbstractBaseClass
+        {
+            public readonly string Name = "Hello World";
+        }
+
+        private class DerivedClass : AbstractBaseClass
+        {
+            public string Value { get; set; }
         }
     }
 }
