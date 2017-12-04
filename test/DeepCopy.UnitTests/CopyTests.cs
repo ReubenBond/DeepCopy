@@ -110,6 +110,19 @@ namespace DeepCopy.UnitTests
         }
 
         [Fact]
+        public void CanCopyInterfaceField()
+        {
+            PocoWithInterface original = new PocoWithInterface();
+
+            original.Collection.Add("A");
+
+            var result = DeepCopier.Copy(original);
+
+            Assert.NotSame(original, result); 
+            Assert.NotSame(original.Collection, result.Collection);
+        }
+
+        [Fact]
         public void CanCopyCollections()
         {
             {
@@ -354,6 +367,11 @@ namespace DeepCopy.UnitTests
         private class Poco
         {
             public object Reference { get; set; }
+        }
+
+        private class PocoWithInterface
+        {
+            public readonly ICollection<string> Collection = new List<string>();
         }
 
         private class PocoWithPrivateReadonly

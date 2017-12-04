@@ -148,6 +148,12 @@ namespace DeepCopy
             {
                 return this.policies[type] = Policy.Immutable;
             }
+
+            if (type.IsInterface)
+            {
+                return this.policies[type] = Policy.Mutable;
+            }
+
             if (type.IsArray)
             {
                 return this.policies[type] = Policy.Mutable;
