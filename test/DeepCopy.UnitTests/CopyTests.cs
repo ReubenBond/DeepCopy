@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Xunit;
 
@@ -107,6 +108,45 @@ namespace DeepCopy.UnitTests
             var result = DeepCopier.Copy(original);
             Assert.Equal(original, result);
             Assert.NotSame(original, result);
+        }
+
+        [Fact]
+        public void CanCopyInterfaceField()
+        {
+            PocoWithInterface original = new PocoWithInterface();
+
+            original.Collection.Add("A");
+
+            var result = DeepCopier.Copy(original);
+
+            Assert.NotSame(original, result); 
+            Assert.NotSame(original.Collection, result.Collection);
+        }
+
+        [Fact]
+        public void CanCopyAbstractBaseClassField()
+        {
+            PocoWithAbstractBaseClass original =
+                new PocoWithAbstractBaseClass(new DerivedClass());
+
+
+            var result = DeepCopier.Copy(original);
+
+            Assert.NotSame(original, result);
+            Assert.NotSame(original.Child, result.Child);
+        }
+
+        [Fact]
+        public void CanCopyBaseClassField()
+        {
+            PocoWithBaseClass original =
+                new PocoWithBaseClass(new DerivedChildClass());
+
+
+            var result = DeepCopier.Copy(original);
+
+            Assert.NotSame(original, result);
+            Assert.NotSame(original.Child, result.Child);
         }
 
         [Fact]
@@ -356,6 +396,30 @@ namespace DeepCopy.UnitTests
             public object Reference { get; set; }
         }
 
+        private class PocoWithInterface
+        {
+            public readonly ICollection<string> Collection = new List<string>();
+        }
+
+        private class PocoWithAbstractBaseClass
+        {
+            public PocoWithAbstractBaseClass(AbstractBaseClass child)
+            {
+                Child = child;
+            }
+            public readonly AbstractBaseClass Child;
+        }
+
+
+        private class PocoWithBaseClass
+        {
+            public PocoWithBaseClass(BaseClass child)
+            {
+                Child = child;
+            }
+            public readonly BaseClass Child;
+        }
+
         private class PocoWithPrivateReadonly
         {
             private readonly object reference;
@@ -385,6 +449,26 @@ namespace DeepCopy.UnitTests
         private class CyclicPocoBaseSibling
         {
             public string Name { get; set; }
+        }
+
+        private abstract class AbstractBaseClass
+        {
+            public readonly string Name = "Hello World";
+        }
+
+        private class DerivedClass : AbstractBaseClass
+        {
+            public string Value { get; set; }
+        }
+
+        private class BaseClass
+        {
+            public readonly string Name = "Hello World";
+        }
+
+        private class DerivedChildClass : BaseClass
+        {
+            public string Value { get; set; }
         }
     }
 }

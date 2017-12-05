@@ -23,6 +23,7 @@ namespace DeepCopy
         /// Returns the copy of <paramref name="original"/> if it has been copied or <see langword="null"/> if it has not yet been copied.
         /// </summary>
         /// <param name="original">The original object.</param>
+        /// <param name="result">The copied object.</param>
         /// <returns>The copy of <paramref name="original"/> or <see langword="null"/> if no copy has been made.</returns>
         public bool TryGetCopy(object original, out object result)
         {
