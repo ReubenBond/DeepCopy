@@ -137,6 +137,19 @@ namespace DeepCopy.UnitTests
         }
 
         [Fact]
+        public void CanCopyBaseClassField()
+        {
+            PocoWithBaseClass original =
+                new PocoWithBaseClass(new DerivedChildClass());
+
+
+            var result = DeepCopier.Copy(original);
+
+            Assert.NotSame(original, result);
+            Assert.NotSame(original.Child, result.Child);
+        }
+
+        [Fact]
         public void CanCopyCollections()
         {
             {
@@ -397,6 +410,16 @@ namespace DeepCopy.UnitTests
             public readonly AbstractBaseClass Child;
         }
 
+
+        private class PocoWithBaseClass
+        {
+            public PocoWithBaseClass(BaseClass child)
+            {
+                Child = child;
+            }
+            public readonly BaseClass Child;
+        }
+
         private class PocoWithPrivateReadonly
         {
             private readonly object reference;
@@ -434,6 +457,16 @@ namespace DeepCopy.UnitTests
         }
 
         private class DerivedClass : AbstractBaseClass
+        {
+            public string Value { get; set; }
+        }
+
+        private class BaseClass
+        {
+            public readonly string Name = "Hello World";
+        }
+
+        private class DerivedChildClass : BaseClass
         {
             public string Value { get; set; }
         }

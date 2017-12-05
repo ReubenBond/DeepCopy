@@ -149,7 +149,8 @@ namespace DeepCopy
                 return this.policies[type] = Policy.Immutable;
             }
 
-            if (type.IsInterface || type.IsAbstract)
+            // covers interface and abstract type too
+            if (!type.IsSealed)
             {
                 return this.policies[type] = Policy.Mutable;
             }
@@ -165,7 +166,7 @@ namespace DeepCopy
                 foreach (var copyableField in copyableFields)
                 {
                     var fieldType = copyableField.FieldType;
-                    if (type == fieldType || GetPolicy(fieldType) != Policy.Immutable)
+                    if (GetPolicy(fieldType) != Policy.Immutable)
                     {
                         return this.policies[type] = Policy.Mutable;
                     }
@@ -181,13 +182,15 @@ namespace DeepCopy
                     {
                         return this.policies[type] = Policy.Mutable;
                     }
+
                     var fieldType = copyableField.FieldType;
-                    if (AssignableFromEqualityComparer.Instance.Equals(type, fieldType) || GetPolicy(fieldType) != Policy.Immutable)
+                    if (GetPolicy(fieldType) != Policy.Immutable)
                     {
                         return this.policies[type] = Policy.Mutable;
                     }
                 }
             }
+
             return this.policies[type] = Policy.Immutable;
         }
 
