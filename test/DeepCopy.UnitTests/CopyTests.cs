@@ -344,6 +344,14 @@ namespace DeepCopy.UnitTests
             Assert.Same(result, result.BaseSibling);
         }
 
+        [Fact]
+        public void RegressionTest_20()
+        {
+            var original = new Dictionary<int, Component>() { { 1, new Component() }, };
+            var result = DeepCopier.Copy(original);
+            GC.GetTotalMemory(true); // force full GC
+        }
+
         public static IEnumerable<object[]> ImmutableTestData()
         {
             yield return new object[] { 5m };
@@ -469,6 +477,16 @@ namespace DeepCopy.UnitTests
         private class DerivedChildClass : BaseClass
         {
             public string Value { get; set; }
+        }
+
+        private class Component
+        {
+            public Transform Transform;
+        }
+
+        private class Transform : Component
+        {
+
         }
     }
 }
