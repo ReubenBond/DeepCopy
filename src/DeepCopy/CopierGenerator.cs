@@ -142,16 +142,10 @@ namespace DeepCopy
 
             if (needsTracking)
             {
+                // only non-ValueType needsTracking
                 il.MarkLabel(hasCopyLabel);
                 il.Emit(OpCodes.Ldloc_1);
-                if (type.IsValueType)
-                {
-                    il.Emit(OpCodes.Unbox, type);
-                }
-                else
-                {
-                    il.Emit(OpCodes.Castclass, type);
-                }
+                il.Emit(OpCodes.Castclass, type);
                 il.Emit(OpCodes.Ret);
             }
 
