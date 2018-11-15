@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -144,7 +144,14 @@ namespace DeepCopy
             {
                 il.MarkLabel(hasCopyLabel);
                 il.Emit(OpCodes.Ldloc_1);
-                il.Emit(OpCodes.Castclass, type);
+                if (type.IsValueType)
+                {
+                    il.Emit(OpCodes.Unbox, type);
+                }
+                else
+                {
+                    il.Emit(OpCodes.Castclass, type);
+                }
                 il.Emit(OpCodes.Ret);
             }
 
