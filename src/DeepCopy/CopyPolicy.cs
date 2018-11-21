@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -86,6 +86,10 @@ namespace DeepCopy
 
         public bool NeedsTracking(Type type)
         {
+            if (type.IsValueType)
+            {
+                return false;
+            }
             var policy = GetPolicy(type);
             // we found something mutable now we need to check if it needs tracking
             if (policy == Policy.Mutable)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -142,6 +142,7 @@ namespace DeepCopy
 
             if (needsTracking)
             {
+                // only non-ValueType needsTracking
                 il.MarkLabel(hasCopyLabel);
                 il.Emit(OpCodes.Ldloc_1);
                 il.Emit(OpCodes.Castclass, type);
