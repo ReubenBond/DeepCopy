@@ -9,6 +9,14 @@ namespace DeepCopy.UnitTests
     public class CopyTests
     {
         [Fact]
+        public void CanCopyTypes()
+        {
+            var original = typeof(string);
+            var result = DeepCopier.Copy(original);
+            Assert.Same(original, result);
+        }
+        
+        [Fact]
         public void CanCopyStrings()
         {
             var original = "hello!";

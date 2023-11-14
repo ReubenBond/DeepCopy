@@ -23,6 +23,9 @@ namespace DeepCopy
             if (original == null) return original;
 
             var type = original.GetType();
+
+            if (type.FullName?.Equals("System.RuntimeType", StringComparison.InvariantCulture) ?? false) return original;
+            
             if (type == GenericType) return MatchingTypeCopier(original, context);
 
             var result = Copiers.GetOrAdd(type, GenerateCopier);
